@@ -1,138 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mobile Object Detection</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fruit Detection at 1080p</title>
   <style>
-    /* Basic reset */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
     body {
-      background: #222;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    #webcam-container {
+      margin: 20px auto;
+      /* The canvas will be scaled to fit the screen, even if captured at 1080p */
+      max-width: 100%;
+      border: 1px solid #ccc;
+    }
+    #label-container {
+      margin: 20px auto;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+    #threshold-container {
+      margin: 20px auto;
       display: flex;
-      justify-content: center;
       align-items: center;
-      min-height: 100vh;
-      overflow: hidden;
+      justify-content: center;
+      gap: 10px;
     }
-    /* Container for the canvas */
-    .camera-container {
-      position: relative;
-      width: 100%;
-      max-width: 640px; /* maximum width for larger screens */
+    input[type="range"] {
+      width: 200px;
     }
-    /* Hide the video element */
-    #video {
-      display: none;
-    }
-    /* Responsive canvas */
-    #canvas {
-      width: 100%;
-      height: auto;
-      display: block;
+    /* Optionally style the canvas to scale down */
+    canvas {
+      width: 100%; /* Adjust the display width */
+      height: auto; /* Maintain aspect ratio */
     }
   </style>
 </head>
 <body>
-  <div class="camera-container">
-    <!-- Video element (hidden) for the camera feed -->
-    <video id="video" autoplay muted playsinline></video>
-    <!-- Canvas element for drawing bounding boxes -->
-    <canvas id="canvas"></canvas>
+  <h1>Fruit Detection at 1080p</h1>
+  <!-- Button to start the detection -->
+  <button type="button" onclick="init()">Start</button>
+
+  <!-- Slider container to adjust threshold (1% to 100%) -->
+  <div id="threshold-container">
+    <label for="threshold-slider">Threshold: <span id="threshold-value">50</span>%</label>
+    <input type="range" id="threshold-slider" min="1" max="100" value="50" />
   </div>
 
-  <!-- TensorFlow.js and the COCO-SSD model -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
-  
+  <!-- Webcam and result containers -->
+  <div id="webcam-container"></div>
+  <div id="label-container"></div>
+
+  <!-- TensorFlow.js and Teachable Machine Image Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
   <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    let model;
+    // Set the URL to the folder containing your model files.
+    // Make sure these files (model.json, metadata.json, and weights.bin) are placed in the "my_model" folder.
+    const URL = "./my_model/";
 
-    // Setup the camera with constraints to use the back camera
-    async function setupCamera() {
+    let model, webcam, labelContainer, maxPredictions;
+    let threshold = 0.5; // default threshold (50%)
+
+    // Update threshold when the slider changes
+    const slider = document.getElementById("threshold-slider");
+    const thresholdValueLabel = document.getElementById("threshold-value");
+    slider.addEventListener("input", function() {
+      threshold = slider.value / 100; // convert percentage to decimal
+      thresholdValueLabel.innerText = slider.value;
+    });
+
+    // Initialize the Teachable Machine model and the webcam
+    async function init() {
+      const modelURL = URL + "model.json";
+      const metadataURL = URL + "metadata.json";
+
+      // Load the model and metadata
+      model = await tmImage.load(modelURL, metadataURL);
+      maxPredictions = model.getTotalClasses();
+
+      // Setup the webcam with the desired 1920x1080 resolution
+      const flip = true;
+      webcam = new tmImage.Webcam(1920, 1080, flip); // Set capture resolution to 1920x1080
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 640 },
-            height: { ideal: 480 }
-          },
-          audio: false
-        });
-        video.srcObject = stream;
+        await webcam.setup(); // request access to the webcam
+      } catch (error) {
+        alert("Error setting up the webcam: " + error);
+        return;
+      }
+      await webcam.play();
+      window.requestAnimationFrame(loop);
 
-        // Ensure the video metadata is loaded before proceeding
-        return new Promise((resolve) => {
-          video.onloadedmetadata = () => {
-            // Set the canvas dimensions to match the video
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            resolve(video);
-          };
-        });
-      } catch (err) {
-        alert("Error accessing the camera: " + err);
+      // Append the webcam canvas to the DOM
+      document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+      // Prepare the label container for displaying results
+      labelContainer = document.getElementById("label-container");
+      labelContainer.innerHTML = `<div id="result-label">Loading model...</div>`;
+    }
+
+    // Continuously update the webcam and run predictions
+    async function loop() {
+      webcam.update(); // update the webcam frame
+      await predict();
+      window.requestAnimationFrame(loop);
+    }
+
+    // Run the prediction on the current webcam frame
+    async function predict() {
+      // Predict using the webcam canvas
+      const predictions = await model.predict(webcam.canvas);
+
+      // Find the prediction with the highest probability
+      let highestPrediction = null;
+      for (let i = 0; i < predictions.length; i++) {
+        if (!highestPrediction || predictions[i].probability > highestPrediction.probability) {
+          highestPrediction = predictions[i];
+        }
+      }
+
+      // Get the result label element
+      const resultLabel = document.getElementById("result-label");
+
+      // Check if the highest probability meets the threshold; otherwise, show "Not in database"
+      if (highestPrediction && highestPrediction.probability >= threshold) {
+        resultLabel.innerHTML = `${highestPrediction.className}: ${(highestPrediction.probability * 100).toFixed(1)}%`;
+      } else {
+        resultLabel.innerHTML = `Not in database`;
       }
     }
-
-    // Load the COCO-SSD model
-    async function loadModel() {
-      model = await cocoSsd.load();
-      console.log("COCO-SSD model loaded.");
-      detectFrame();
-    }
-
-    // Continuously detect objects on each frame
-    function detectFrame() {
-      model.detect(video).then(predictions => {
-        renderPredictions(predictions);
-        requestAnimationFrame(detectFrame);
-      });
-    }
-
-    // Draw the predictions (bounding boxes and labels) on the canvas
-    function renderPredictions(predictions) {
-      // Clear previous drawings
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Draw the current video frame as background
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Draw each prediction
-      predictions.forEach(prediction => {
-        const [x, y, width, height] = prediction.bbox;
-        
-        // Draw bounding box
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "#00FFFF";
-        ctx.strokeRect(x, y, width, height);
-
-        // Draw label background for better visibility
-        ctx.font = "16px Arial";
-        const text = `${prediction.class} (${(prediction.score * 100).toFixed(1)}%)`;
-        const textWidth = ctx.measureText(text).width;
-        const textHeight = 16;
-        ctx.fillStyle = "#00FFFF";
-        ctx.fillRect(x, y - textHeight, textWidth + 4, textHeight);
-
-        // Draw text (label)
-        ctx.fillStyle = "#000";
-        ctx.fillText(text, x + 2, y - 2);
-      });
-    }
-
-    // Initialize the camera and load the model
-    setupCamera().then(() => {
-      video.play();
-      loadModel();
-    });
   </script>
 </body>
 </html>
