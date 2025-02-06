@@ -86,7 +86,7 @@
 
       // Setup the webcam with the desired 1920x1080 resolution
       const flip = true;
-      webcam = new tmImage.Webcam(1920, 1080, flip); // Set capture resolution to 1920x1080
+      webcam = new tmImage.Webcam(1080,1920, flip); // Set capture resolution to 1920x1080
       try {
         await webcam.setup(); // request access to the webcam
       } catch (error) {
