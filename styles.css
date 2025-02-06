@@ -19,6 +19,7 @@ body {
 video {
     border: 2px solid #ccc;
     border-radius: 5px;
+    z-index: 999;
 }
 
 .controls {
@@ -29,12 +30,14 @@ video {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
+    color: #000000;
 }
 
 #resultsTable th, #resultsTable td {
     border: 1px solid #ddd;
     padding: 8px;
     text-align: left;
+    
 }
 
 #resultsTable th {
