@@ -8,10 +8,23 @@ async function init() {
     model = await tmImage.load(modelURL, metadataURL);
     maxPredictions = model.getTotalClasses();
 
+    const constraints = {
+        video: {
+            facingMode: { exact: "environment" } // Request the back camera
+        }
+    };
+
     const flip = false; // Set to false to use the back camera
     webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
-    await webcam.setup(); // request access to the webcam
-    await webcam.play();
+
+    // Override the default getUserMedia call to use our constraints
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    webcam.webcam.srcObject = stream;
+
+    await new Promise((resolve) => {
+        webcam.webcam.onloadedmetadata = resolve;
+    });
+    webcam.webcam.play();
     window.requestAnimationFrame(loop);
 
     document.getElementById("webcam-container").appendChild(webcam.canvas);
