@@ -2,137 +2,168 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fruit Detection at 1080p</title>
+  <!-- Viewport meta tag for responsive design -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Fruit Detection with Teachable Machine</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      text-align: center;
+    /* Reset some default styles */
+    * {
       margin: 0;
-      padding: 20px;
+      padding: 0;
+      box-sizing: border-box;
     }
-    #webcam-container {
-      margin: 20px auto;
-      /* The canvas will be scaled to fit the screen, even if captured at 1080p */
-      max-width: 100%;
-       max-height: 90%;
-      border: 1px solid #ccc;
-    }
-    #label-container {
-      margin: 20px auto;
-      font-size: 1.2em;
-      font-weight: bold;
-    }
-    #threshold-container {
-      margin: 20px auto;
+    body {
+      background: #222;
+      color: #fff;
+      font-family: Arial, sans-serif;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 10px;
+      padding: 10px;
+    }
+    h1 {
+      margin: 10px 0;
+      font-size: 1.2em;
+      text-align: center;
+    }
+    /* Container to hold the webcam canvas */
+    #webcam-container {
+      width: 100%;
+      max-width: 400px;
+      margin: 10px auto;
+    }
+    /* Slider container styling */
+    #slider-container {
+      width: 80%;
+      max-width: 400px;
+      margin: 10px auto;
+      text-align: center;
     }
     input[type="range"] {
-      width: 200px;
+      width: 100%;
     }
-    /* Optionally style the canvas to scale down */
-    canvas {
-      width: 100%; /* Adjust the display width */
-      height: auto; /* Maintain aspect ratio */
+    /* Label container for predictions */
+    #label-container {
+      width: 80%;
+      max-width: 400px;
+      margin: 10px auto;
+      text-align: center;
+      font-size: 1.1em;
+    }
+    /* Button styling */
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      margin-bottom: 10px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>Fruit Detection at 1080p</h1>
-  <!-- Button to start the detection -->
+  <h1>Fruit Detection Model</h1>
   <button type="button" onclick="init()">Start</button>
-
-  <!-- Slider container to adjust threshold (1% to 100%) -->
-  <div id="threshold-container">
-    <label for="threshold-slider">Threshold: <span id="threshold-value">50</span>%</label>
-    <input type="range" id="threshold-slider" min="1" max="100" value="50" />
+  
+  <!-- Slider for adjusting threshold -->
+  <div id="slider-container">
+    <label for="thresholdSlider">Threshold: <span id="thresholdValue">50</span>%</label><br />
+    <input type="range" id="thresholdSlider" min="1" max="100" value="50" />
   </div>
-
-  <!-- Webcam and result containers -->
+  
+  <!-- Container for the webcam feed -->
   <div id="webcam-container"></div>
+  
+  <!-- Container for displaying predictions -->
   <div id="label-container"></div>
 
-  <!-- TensorFlow.js and Teachable Machine Image Library -->
+  <!-- Load TensorFlow.js and the Teachable Machine image library -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-
-  <script>
-    // Set the URL to the folder containing your model files.
-    // Make sure these files (model.json, metadata.json, and weights.bin) are placed in the "my_model" folder.
+  
+  <script type="text/javascript">
+    // The base URL for your Teachable Machine model files
     const URL = "./my_model/";
 
     let model, webcam, labelContainer, maxPredictions;
-    let threshold = 0.5; // default threshold (50%)
-
-    // Update threshold when the slider changes
-    const slider = document.getElementById("threshold-slider");
-    const thresholdValueLabel = document.getElementById("threshold-value");
-    slider.addEventListener("input", function() {
-      threshold = slider.value / 100; // convert percentage to decimal
-      thresholdValueLabel.innerText = slider.value;
+    // Default threshold value (50% -> 0.5)
+    let threshold = 0.5;
+    
+    // Update threshold value when the slider is moved
+    document.getElementById("thresholdSlider").addEventListener("input", function(){
+      threshold = this.value / 100; // Convert slider value (1-100) to 0-1 scale
+      document.getElementById("thresholdValue").textContent = this.value;
     });
-
-    // Initialize the Teachable Machine model and the webcam
+    
+    // Initialize the model and webcam
     async function init() {
       const modelURL = URL + "model.json";
       const metadataURL = URL + "metadata.json";
-
-      // Load the model and metadata
+      
+      // Load the Teachable Machine model and its metadata
       model = await tmImage.load(modelURL, metadataURL);
       maxPredictions = model.getTotalClasses();
-
-      // Setup the webcam with the desired 1920x1080 resolution
+      
+      // Set up the webcam.
+      // For a portrait-friendly view, we'll use the full device width.
+      const webcamWidth = window.innerWidth > 400 ? 400 : window.innerWidth;
+      // You can adjust the height as needed; here we use a 4:3 aspect ratio.
+      const webcamHeight = webcamWidth * (3/4);
+      
+      // 'flip' the webcam if needed (true for mirrored view)
       const flip = true;
-      webcam = new tmImage.Webcam(1080,1920, flip); // Set capture resolution to 1920x1080
-      try {
-        await webcam.setup(); // request access to the webcam
-      } catch (error) {
-        alert("Error setting up the webcam: " + error);
-        return;
-      }
+      webcam = new tmImage.Webcam(webcamWidth, webcamHeight, flip);
+      await webcam.setup(); // Request access to the webcam
       await webcam.play();
       window.requestAnimationFrame(loop);
-
-      // Append the webcam canvas to the DOM
+      
+      // Append the webcam's canvas element to the container
       document.getElementById("webcam-container").appendChild(webcam.canvas);
-
-      // Prepare the label container for displaying results
+      
+      // Set up label container: create one div per prediction class
       labelContainer = document.getElementById("label-container");
-      labelContainer.innerHTML = `<div id="result-label">Loading model...</div>`;
+      // Clear any previous content
+      labelContainer.innerHTML = "";
+      for (let i = 0; i < maxPredictions; i++) {
+        labelContainer.appendChild(document.createElement("div"));
+      }
     }
-
-    // Continuously update the webcam and run predictions
+    
+    // Main loop: update the webcam frame and run predictions
     async function loop() {
-      webcam.update(); // update the webcam frame
+      webcam.update(); // Update the webcam frame
       await predict();
       window.requestAnimationFrame(loop);
     }
-
-    // Run the prediction on the current webcam frame
+    
+    // Run the model on the current webcam frame
     async function predict() {
-      // Predict using the webcam canvas
+      // The model can take in an image, video, or canvas element.
       const predictions = await model.predict(webcam.canvas);
-
-      // Find the prediction with the highest probability
-      let highestPrediction = null;
-      for (let i = 0; i < predictions.length; i++) {
-        if (!highestPrediction || predictions[i].probability > highestPrediction.probability) {
-          highestPrediction = predictions[i];
+      
+      // Flag to check if any prediction meets the threshold
+      let aboveThreshold = false;
+      
+      // Clear all previous prediction texts
+      labelContainer.innerHTML = "";
+      
+      // Loop through each prediction from the model
+      for (let i = 0; i < maxPredictions; i++) {
+        const prediction = predictions[i];
+        const probability = prediction.probability;
+        const percent = (probability * 100).toFixed(2);
+        
+        // If the prediction meets or exceeds the threshold, display it
+        if (probability >= threshold) {
+          aboveThreshold = true;
+          const classPrediction = prediction.className + ": " + percent + "%";
+          const div = document.createElement("div");
+          div.textContent = classPrediction;
+          labelContainer.appendChild(div);
         }
       }
-
-      // Get the result label element
-      const resultLabel = document.getElementById("result-label");
-
-      // Check if the highest probability meets the threshold; otherwise, show "Not in database"
-      if (highestPrediction && highestPrediction.probability >= threshold) {
-        resultLabel.innerHTML = `${highestPrediction.className}: ${(highestPrediction.probability * 100).toFixed(1)}%`;
-      } else {
-        resultLabel.innerHTML = `Not in database`;
+      
+      // If no prediction meets the threshold, show a message
+      if (!aboveThreshold) {
+        labelContainer.innerHTML = "<div>Not in database</div>";
       }
     }
   </script>
