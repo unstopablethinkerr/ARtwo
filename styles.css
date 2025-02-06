@@ -5,7 +5,7 @@ body {
     align-items: center;
     height: 100vh;
     margin: 0;
-    background-color: #f0f0f0;
+    background-color: #f4f4f4;
 }
 
 .container {
@@ -18,30 +18,25 @@ body {
 
 video {
     border: 2px solid #ccc;
-    border-radius: 10px;
-}
-
-button {
-    margin-top: 10px;
-    padding: 10px 20px;
-    font-size: 16px;
+    border-radius: 5px;
 }
 
 .controls {
-    margin-top: 20px;
+    margin: 20px 0;
 }
 
-table {
-    margin-top: 20px;
+#resultsTable {
     width: 100%;
     border-collapse: collapse;
+    margin-top: 20px;
 }
 
-table, th, td {
+#resultsTable th, #resultsTable td {
     border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
 }
 
-th, td {
-    padding: 10px;
-    text-align: left;
+#resultsTable th {
+    background-color: #f2f2f2;
 }
