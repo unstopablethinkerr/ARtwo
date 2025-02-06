@@ -3,9 +3,12 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-direction: column;
     height: 100vh;
     margin: 0;
     background-color: #f4f4f4;
+    padding: 10px;
+    box-sizing: border-box;
 }
 
 .container {
@@ -14,30 +17,44 @@ body {
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 600px;
 }
 
-video {
+#webcam-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+    margin-bottom: 20px;
+}
+
+#webcam-container canvas {
+    width: 100%;
+    height: auto;
     border: 2px solid #ccc;
     border-radius: 5px;
-    z-index: 999;
 }
 
 .controls {
     margin: 20px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 #resultsTable {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
-    color: #000000;
+    font-size: 14px;
 }
 
 #resultsTable th, #resultsTable td {
     border: 1px solid #ddd;
     padding: 8px;
-    text-align: center;
-    
+    text-align: left;
 }
 
 #resultsTable th {
