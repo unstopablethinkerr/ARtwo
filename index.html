@@ -1,33 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Real-Time Object Detection</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mobile Object Detection</title>
   <style>
-    body {
+    /* Basic reset */
+    * {
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
+    }
+    body {
       background: #222;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
       overflow: hidden;
     }
-    #video, #canvas {
-      position: absolute;
-      /* Mirror the video feed if desired */
-      transform: scaleX(-1);
+    /* Container to maintain relative positioning */
+    .camera-container {
+      position: relative;
+      width: 100%;
+      max-width: 640px;  /* maximum width for larger screens */
     }
+    /* Responsive video and canvas */
+    #video, #canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    /* Optionally mirror the video if needed */
+    /* Uncomment the next line if you want the video mirrored */
+/*     #video, #canvas { transform: scaleX(-1); } */
   </style>
 </head>
 <body>
-  <!-- Video element for webcam feed -->
-  <video id="video" width="640" height="480" autoplay muted></video>
-  <!-- Canvas for drawing bounding boxes -->
-  <canvas id="canvas" width="640" height="480"></canvas>
+  <div class="camera-container">
+    <!-- Video element for the camera feed -->
+    <video id="video" autoplay muted playsinline></video>
+    <!-- Canvas element for drawing bounding boxes -->
+    <canvas id="canvas"></canvas>
+  </div>
 
-  <!-- TensorFlow.js and COCO-SSD libraries -->
+  <!-- TensorFlow.js and the COCO-SSD model -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
   
@@ -37,21 +54,30 @@
     const ctx = canvas.getContext('2d');
     let model;
 
-    // Setup the webcam stream
+    // Setup the camera with constraints to use the back camera
     async function setupCamera() {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480 },
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          },
           audio: false
         });
         video.srcObject = stream;
+
+        // Ensure the video metadata is loaded before proceeding
         return new Promise((resolve) => {
           video.onloadedmetadata = () => {
+            // Set the canvas dimensions to match the video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
             resolve(video);
           };
         });
-      } else {
-        alert("Webcam not available.");
+      } catch (err) {
+        alert("Error accessing the camera: " + err);
       }
     }
 
@@ -62,7 +88,7 @@
       detectFrame();
     }
 
-    // Continuously detect objects in the video stream
+    // Continuously detect objects on each frame
     function detectFrame() {
       model.detect(video).then(predictions => {
         renderPredictions(predictions);
@@ -70,31 +96,38 @@
       });
     }
 
-    // Draw the predictions onto the canvas
+    // Draw the predictions (bounding boxes and labels) on the canvas
     function renderPredictions(predictions) {
-      // Clear the previous canvas content
+      // Clear previous drawings
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Optionally, draw the video frame as the background
+
+      // Optionally, draw the current video frame as background
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+      // Draw each prediction
       predictions.forEach(prediction => {
         const [x, y, width, height] = prediction.bbox;
-
-        // Draw the bounding box
+        
+        // Draw bounding box
         ctx.lineWidth = 2;
         ctx.strokeStyle = "#00FFFF";
         ctx.strokeRect(x, y, width, height);
 
-        // Draw the label and score
+        // Draw label background for better visibility
         ctx.font = "16px Arial";
-        ctx.fillStyle = "#00FFFF";
         const text = `${prediction.class} (${(prediction.score * 100).toFixed(1)}%)`;
-        ctx.fillText(text, x, y > 10 ? y - 5 : 10);
+        const textWidth = ctx.measureText(text).width;
+        const textHeight = 16;
+        ctx.fillStyle = "#00FFFF";
+        ctx.fillRect(x, y - textHeight, textWidth + 4, textHeight);
+
+        // Draw text (label)
+        ctx.fillStyle = "#000";
+        ctx.fillText(text, x + 2, y - 2);
       });
     }
 
-    // Initialize everything
+    // Initialize the camera and load the model
     setupCamera().then(() => {
       video.play();
       loadModel();
