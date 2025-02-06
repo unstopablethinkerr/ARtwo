@@ -1,238 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>Mobile Fruit Detector</title>
-    <style>
-      /* Your CSS remains the same */
-       /* Reset some default styles */
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      html, body {
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: #fcfcfc;
-        color: #191129;
-        font-family: 'Segoe UI', Tahoma, Verdana, sans-serif, sans-serif;
-      }
-      /* Main container fills the viewport */
-      .main-container {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        align-items: center;
-        height: 90%;
-        padding: 5%;
-      }
-      /* Results table styling */
-      .result-table {
-        width: 100%;
-        max-width: 400px;
-        border-collapse: collapse;
-        font-size: 1em;
-      }
-      .result-table th, .result-table td {
-        border: 1px solid #f3ce54;
-        padding: 4px;
-        text-align: center;
-      }
-      .result-table th {
-        background: #b9ff14;
-      }
-      /* Camera container: set to occupy a portion of the screen (middle area) */
-      .camera-container {
-        width: 100%;
-        max-width: 1080px;
-        height: 45vh;
-        background: #000;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-      /* Ensure the webcam feed scales responsively */
-      #webcam-container canvas,
-      #webcam-container video {
-        width: fit-content;
-        height: fit-content;
-      }
-      /* Controls container at the bottom */
-      .controls {
-        bottom: 2%;
-        width: 100%;
-        max-width: 100%;
-        text-align: center;
-      }
-      .slider-container {
-        margin-bottom: 5px;
-        width: 100%;
-        padding: 5%;
-        writing-mode: inherit;
-
-      }
-      .slider-container input[type="range"] {
-        width: 100%;
-      }
-      .control-btn {
-        width: 50%;
-        padding: 12px;
-        font-size: 1.2em;
-        background: #00aaff;
-        border: none;
-        color: #fff;
-        border-radius: 5px;
-        cursor: pointer;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="main-container">
-      <!-- Your HTML structure remains the same -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit Recognition</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Fruit Recognition</h1>
+        <video id="video" width="600" height="450" autoplay></video>
+        <button id="toggleButton">Start</button>
+        <div class="controls">
+            <label for="threshold">Threshold:</label>
+            <input type="range" id="threshold" min="0" max="1" step="0.01" value="0.7">
+            <span id="thresholdValue">0.7</span>
+        </div>
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>Label</th>
+                    <th>Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Strawberry</td><td id="strawberry">0%</td></tr>
+                <tr><td>Grape</td><td id="grape">0%</td></tr>
+                <tr><td>Apple</td><td id="apple">0%</td></tr>
+                <tr><td>Not in Database</td><td id="notInDatabase">0%</td></tr>
+            </tbody>
+        </table>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
-    <script type="text/javascript">
-      // Use relative paths to your local model files
-      const modelURL = './my_model/model.json'; // Path to your model.json file
-      const metadataURL = './my_model/metadata.json'; // Path to your metadata.json file
-
-      let model, webcam, maxPredictions, animFrame;
-      let threshold = 0.5;
-      let isRunning = false;
-
-      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-      // DOM Elements
-      const resultApples = document.getElementById("apples-result");
-      const resultStrawberry = document.getElementById("strawberry-result");
-      const resultGrape = document.getElementById("grape-result");
-      const resultNotFound = document.getElementById("notfound-result");
-
-      document.getElementById("thresholdSlider").addEventListener("input", function () {
-        threshold = this.value / 100;
-        document.getElementById("thresholdValue").textContent = this.value;
-      });
-
-      async function toggleStartStop() {
-        try {
-          if (!isRunning) {
-            await init();
-            document.getElementById("controlBtn").textContent = "Stop";
-            isRunning = true;
-          } else {
-            stopDetection();
-          }
-        } catch (error) {
-          console.error('Error:', error);
-          alert(`Error: ${error.message}`);
-          stopDetection();
-        }
-      }
-
-      async function init() {
-        // Load the model and metadata from local files
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
-
-        // Webcam configuration
-        const constraints = {
-          video: {
-            facingMode: 'environment',
-            width: { ideal: 1080 },
-            height: { ideal: 1920 }
-          }
-        };
-
-        webcam = new tmImage.Webcam(1080, 1920, false, constraints);
-
-        try {
-          await webcam.setup();
-          await webcam.play();
-        } catch (error) {
-          throw new Error('Camera access denied: ' + error.message);
-        }
-
-        const webcamContainer = document.getElementById("webcam-container");
-        webcamContainer.innerHTML = '';
-
-        if (isIos) {
-          webcamContainer.appendChild(webcam.webcam);
-          webcam.webcam.style.transform = 'scale(-1, 1)';
-          webcam.webcam.style.width = '100%';
-          webcam.webcam.style.height = 'auto';
-        } else {
-          webcamContainer.appendChild(webcam.canvas);
-          webcam.canvas.style.transform = 'scale(-1, 1)';
-        }
-
-        window.requestAnimationFrame(loop);
-      }
-
-      function stopDetection() {
-        if (webcam) {
-          webcam.stop();
-          document.getElementById("webcam-container").innerHTML = '';
-        }
-        if (animFrame) cancelAnimationFrame(animFrame);
-        document.getElementById("controlBtn").textContent = "Start";
-        isRunning = false;
-        // Reset results
-        resultApples.innerHTML = "0%";
-        resultStrawberry.innerHTML = "0%";
-        resultGrape.innerHTML = "0%";
-        resultNotFound.innerHTML = "0%";
-      }
-
-      async function loop() {
-        webcam.update();
-        await predict();
-        animFrame = window.requestAnimationFrame(loop);
-      }
-
-      async function predict() {
-        let predictions;
-        try {
-          predictions = await model.predict(isIos ? webcam.webcam : webcam.canvas);
-        } catch (error) {
-          console.error('Prediction error:', error);
-          return;
-        }
-
-        let appleProb = 0, strawberryProb = 0, grapeProb = 0;
-        let meetsThreshold = false;
-
-        predictions.forEach(pred => {
-          const p = pred.probability;
-          const cls = pred.className.toLowerCase();
-          if (cls.includes("apple") && p >= threshold) {
-            appleProb = p;
-            meetsThreshold = true;
-          } else if (cls.includes("strawberry") && p >= threshold) {
-            strawberryProb = p;
-            meetsThreshold = true;
-          } else if (cls.includes("grape") && p >= threshold) {
-            grapeProb = p;
-            meetsThreshold = true;
-          }
-        });
-
-        if (!meetsThreshold) {
-          resultApples.innerHTML = "0%";
-          resultStrawberry.innerHTML = "0%";
-          resultGrape.innerHTML = "0%";
-          resultNotFound.innerHTML = "100%";
-        } else {
-          resultApples.innerHTML = Math.round(appleProb * 100) + "%";
-          resultStrawberry.innerHTML = Math.round(strawberryProb * 100) + "%";
-          resultGrape.innerHTML = Math.round(grapeProb * 100) + "%";
-          resultNotFound.innerHTML = "0%";
-        }
-      }
-    </script>
-  </body>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="script.js"></script>
+</body>
 </html>
