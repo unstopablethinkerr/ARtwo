@@ -9,12 +9,11 @@
 <body>
     <div class="container">
         <h1>Fruit Recognition</h1>
-        <video id="video" width="600" height="450" autoplay></video>
-        <button id="toggleButton">Start</button>
+        <video id="video" width="600" height="400" autoplay></video>
         <div class="controls">
-            <label for="threshold">Threshold:</label>
-            <input type="range" id="threshold" min="0" max="1" step="0.01" value="0.7">
-            <span id="thresholdValue">0.7</span>
+            <button id="startStopButton">Start</button>
+            <label for="thresholdSlider">Threshold:</label>
+            <input type="range" id="thresholdSlider" min="0" max="1" step="0.01" value="0.7">
         </div>
         <table id="resultsTable">
             <thead>
@@ -24,14 +23,15 @@
                 </tr>
             </thead>
             <tbody>
-                <tr><td>Strawberry</td><td id="strawberry">0%</td></tr>
-                <tr><td>Grape</td><td id="grape">0%</td></tr>
-                <tr><td>Apple</td><td id="apple">0%</td></tr>
-                <tr><td>Not in Database</td><td id="notInDatabase">0%</td></tr>
+                <tr><td>Strawberry</td><td id="strawberryPercentage">0%</td></tr>
+                <tr><td>Grape</td><td id="grapePercentage">0%</td></tr>
+                <tr><td>Apple</td><td id="applePercentage">0%</td></tr>
+                <tr><td>Not in Database</td><td id="notInDatabasePercentage">0%</td></tr>
             </tbody>
         </table>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
