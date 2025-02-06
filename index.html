@@ -1,213 +1,266 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <!-- Ensure the layout is mobile friendly in portrait mode -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Fruit Detection (Portrait Mode)</title>
-  <style>
-    /* Basic reset */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      background: #222;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 10px;
-    }
-    h1 {
-      margin: 10px 0;
-      font-size: 1.4em;
-      text-align: center;
-    }
-    /* Container for the webcam view */
-    #webcam-container {
-      width: 100%;
-      max-width: 1080px;  /* portrait width */
-      margin: 10px auto;
-    }
-    /* Slider container */
-    #slider-container {
-      width: 90%;
-      max-width: 400px;
-      margin: 10px auto;
-      text-align: center;
-    }
-    input[type="range"] {
-      width: 100%;
-    }
-    /* Table styling */
-    #result-table {
-      width: 90%;
-      max-width: 400px;
-      margin: 20px auto;
-      border-collapse: collapse;
-      text-align: left;
-      font-size: 1.1em;
-    }
-    #result-table th,
-    #result-table td {
-      border: 1px solid #555;
-      padding: 8px 10px;
-    }
-    #result-table th {
-      background-color: #333;
-    }
-    /* Button styling */
-    button {
-      padding: 10px 20px;
-      font-size: 1em;
-      margin-bottom: 10px;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <h1>Fruit Detection Model</h1>
-  <button type="button" onclick="init()">Start</button>
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Responsive meta tag for mobile screens -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Mobile Fruit Detector</title>
+    <style>
+      /* Reset */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      /* Main container fills the mobile screen */
+      body,
+      html {
+        width: 100%;
+        height: 100%;
+      }
+      body {
+        background: #222;
+        color: #fff;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+      }
+      /* Container for the entire app */
+      .main-container {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 10px;
+      }
+      /* Results table styling */
+      .result-table {
+        width: 100%;
+        max-width: 400px;
+        margin: 5px auto;
+        border-collapse: collapse;
+        font-size: 1.1em;
+      }
+      .result-table td,
+      .result-table th {
+        padding: 8px;
+        border: 1px solid #555;
+        text-align: center;
+      }
+      .result-table th {
+        background: #333;
+      }
+      /* Container for the camera feed */
+      .camera-container {
+        width: 100%;
+        /* For portrait, we set an aspect ratio of 9:16 (1080:1920) */
+        max-width: 1080px;
+        position: relative;
+        /* Use flex to center the canvas */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #000;
+      }
+      /* Ensure the webcam canvas scales responsively */
+      #webcam-container canvas {
+        width: 100%;
+        height: auto;
+      }
+      /* Slider container at the bottom */
+      .slider-container {
+        width: 100%;
+        max-width: 400px;
+        margin: 10px auto;
+        text-align: center;
+      }
+      .slider-container input[type="range"] {
+        width: 100%;
+      }
+      /* Start/Stop button */
+      .control-btn {
+        width: 100%;
+        max-width: 400px;
+        padding: 12px;
+        margin: 10px auto;
+        font-size: 1.2em;
+        background: #00aaff;
+        border: none;
+        color: #fff;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main-container">
+      <!-- Results Table: Display probabilities for each fruit and not found -->
+      <table class="result-table">
+        <thead>
+          <tr>
+            <th>Fruit</th>
+            <th>Percentage</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Apples</td>
+            <td id="apples-result">0%</td>
+          </tr>
+          <tr>
+            <td>Strawberry</td>
+            <td id="strawberry-result">0%</td>
+          </tr>
+          <tr>
+            <td>Grape</td>
+            <td id="grape-result">0%</td>
+          </tr>
+          <tr>
+            <td>Not in Database</td>
+            <td id="notfound-result">0%</td>
+          </tr>
+        </tbody>
+      </table>
 
-  <!-- Slider for threshold (1% to 100%) -->
-  <div id="slider-container">
-    <label for="thresholdSlider">Threshold: <span id="thresholdValue">50</span>%</label><br />
-    <input type="range" id="thresholdSlider" min="1" max="100" value="50" />
-  </div>
+      <!-- Container for the camera feed -->
+      <div class="camera-container" id="webcam-container">
+        <!-- The webcam canvas will be appended here -->
+      </div>
 
-  <!-- Container for the webcam feed -->
-  <div id="webcam-container"></div>
+      <!-- Slider and control button area -->
+      <div class="slider-container">
+        <label for="thresholdSlider">Threshold: <span id="thresholdValue">50</span>%</label>
+        <br />
+        <input type="range" id="thresholdSlider" min="1" max="100" value="50" />
+      </div>
+      <button class="control-btn" id="controlBtn" onclick="toggleStartStop()">Start</button>
+    </div>
 
-  <!-- Table to display probabilities -->
-  <table id="result-table">
-    <thead>
-      <tr>
-        <th>Fruit</th>
-        <th>Probability</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Apples</td>
-        <td id="apples-prob">0.00%</td>
-      </tr>
-      <tr>
-        <td>Strawberry</td>
-        <td id="strawberry-prob">0.00%</td>
-      </tr>
-      <tr>
-        <td>Grape</td>
-        <td id="grape-prob">0.00%</td>
-      </tr>
-      <tr>
-        <td>Not in Database</td>
-        <td id="not-db-prob">0.00%</td>
-      </tr>
-    </tbody>
-  </table>
+    <!-- Load TensorFlow.js and Teachable Machine Image library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script>
+      // URL to your model folder (ensure these files exist in your repo)
+      const URL = "./my_model/";
+      let model, webcam, maxPredictions, animFrame;
+      // Threshold value (0.5 by default, corresponding to 50%)
+      let threshold = 0.5;
+      // Flag to know whether the webcam is running
+      let isRunning = false;
+      
+      // DOM Elements for results
+      const resultApples = document.getElementById("apples-result");
+      const resultStrawberry = document.getElementById("strawberry-result");
+      const resultGrape = document.getElementById("grape-result");
+      const resultNotFound = document.getElementById("notfound-result");
 
-  <!-- Load TensorFlow.js and Teachable Machine image library -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-  
-  <script type="text/javascript">
-    // URL pointing to the folder with your model files (model.json, metadata.json, weights.bin)
-    const URL = "./my_model/";
-
-    let model, webcam;
-    let maxPredictions;
-    // Default threshold (50% as 0.5)
-    let threshold = 0.5;
-
-    // Update threshold when the slider is moved
-    document.getElementById("thresholdSlider").addEventListener("input", function(){
-      threshold = this.value / 100;
-      document.getElementById("thresholdValue").textContent = this.value;
-    });
-    
-    // Initialize the Teachable Machine model and webcam
-    async function init() {
-      const modelURL = URL + "model.json";
-      const metadataURL = URL + "metadata.json";
-
-      // Load the model and metadata
-      model = await tmImage.load(modelURL, metadataURL);
-      maxPredictions = model.getTotalClasses();
-
-      // Set up the webcam.
-      // Request a portrait feed with 1080x1920.
-      // The flip parameter is set to false so the image is not mirrored.
-      const flip = false;
-      // Note: Not all devices will support the exact resolution.
-      webcam = new tmImage.Webcam(1080, 1920, flip, {facingMode: "environment"});
-      await webcam.setup(); // request access
-      await webcam.play();
-      window.requestAnimationFrame(loop);
-
-      // Append the webcam canvas to the container.
-      document.getElementById("webcam-container").appendChild(webcam.canvas);
-    }
-    
-    // Main loop: update the webcam frame and run predictions.
-    async function loop() {
-      webcam.update();
-      await predict();
-      window.requestAnimationFrame(loop);
-    }
-    
-    // Run the model on the current webcam frame and update the table.
-    async function predict() {
-      // The model can take an image, video, or canvas element.
-      const predictions = await model.predict(webcam.canvas);
-
-      // Create an object to store probabilities for our target fruits.
-      // (Use lower case for comparisons.)
-      let results = {
-        apples: 0,
-        strawberry: 0,
-        grape: 0
-      };
-
-      // Flag indicating whether any prediction meets or exceeds the threshold.
-      let meetsThreshold = false;
-
-      // Loop through the predictions.
-      predictions.forEach(prediction => {
-        // Standardize the class name (assuming the model's class names match one of these)
-        const className = prediction.className.toLowerCase();
-        const prob = prediction.probability; // a value between 0 and 1
-
-        if ( (className === "apples" || className === "apple") && prob >= threshold ) {
-          results.apples = prob;
-          meetsThreshold = true;
-        } else if ((className === "strawberry" || className === "strawberries") && prob >= threshold) {
-          results.strawberry = prob;
-          meetsThreshold = true;
-        } else if ((className === "grape" || className === "grapes") && prob >= threshold) {
-          results.grape = prob;
-          meetsThreshold = true;
-        }
+      // Update threshold when slider moves
+      document.getElementById("thresholdSlider").addEventListener("input", function () {
+        threshold = this.value / 100;
+        document.getElementById("thresholdValue").textContent = this.value;
       });
 
-      // Update table cells:
-      // If at least one prediction meets threshold, show those probabilities (as percentage with two decimals).
-      // Otherwise, show 0% for fruits and 100% for "Not in Database".
-      if (meetsThreshold) {
-        document.getElementById("apples-prob").textContent = (results.apples * 100).toFixed(2) + "%";
-        document.getElementById("strawberry-prob").textContent = (results.strawberry * 100).toFixed(2) + "%";
-        document.getElementById("grape-prob").textContent = (results.grape * 100).toFixed(2) + "%";
-        document.getElementById("not-db-prob").textContent = "0.00%";
-      } else {
-        // If none meet the threshold, show 0% for each fruit and 100% for Not in Database.
-        document.getElementById("apples-prob").textContent = "0.00%";
-        document.getElementById("strawberry-prob").textContent = "0.00%";
-        document.getElementById("grape-prob").textContent = "0.00%";
-        document.getElementById("not-db-prob").textContent = "100.00%";
+      // Toggle start/stop behavior
+      async function toggleStartStop() {
+        if (!isRunning) {
+          // Start the model and webcam feed
+          await init();
+          document.getElementById("controlBtn").textContent = "Stop";
+          isRunning = true;
+        } else {
+          // Stop the webcam and cancel the animation loop
+          if (webcam) {
+            webcam.stop();
+          }
+          if (animFrame) {
+            cancelAnimationFrame(animFrame);
+          }
+          document.getElementById("controlBtn").textContent = "Start";
+          isRunning = false;
+          // Clear results if desired
+          resultApples.textContent = "0%";
+          resultStrawberry.textContent = "0%";
+          resultGrape.textContent = "0%";
+          resultNotFound.textContent = "0%";
+        }
       }
-    }
-  </script>
-</body>
+
+      // Initialize the model and webcam
+      async function init() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+        // Load the model and metadata
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        // Set up the webcam with back camera and desired resolution
+        // Note: The actual resolution may vary per device
+        webcam = new tmImage.Webcam(1080, 1920, true, { facingMode: { ideal: "environment" } });
+        await webcam.setup(); // request access
+        await webcam.play();
+        // Append webcam canvas to container (clear previous content)
+        const webcamContainer = document.getElementById("webcam-container");
+        webcamContainer.innerHTML = "";
+        webcamContainer.appendChild(webcam.canvas);
+
+        // Start the prediction loop
+        loop();
+      }
+
+      // Main loop: update webcam and run predictions
+      async function loop() {
+        webcam.update(); // update frame
+        await predict();
+        animFrame = requestAnimationFrame(loop);
+      }
+
+      // Run prediction on the current webcam frame
+      async function predict() {
+        // Predict using the webcam canvas
+        const predictions = await model.predict(webcam.canvas);
+        // Expected classes: "Apples", "Strawberry", "Grape"
+        // Normalize predictions: if a prediction is below threshold, set it to 0
+        let appleProb = 0,
+          strawberryProb = 0,
+          grapeProb = 0;
+        let meetsThreshold = false;
+        predictions.forEach((pred) => {
+          // Convert probability to a percentage (0-100)
+          const p = pred.probability;
+          if (pred.className.toLowerCase().includes("apple")) {
+            if (p >= threshold) {
+              appleProb = p;
+              meetsThreshold = true;
+            }
+          } else if (pred.className.toLowerCase().includes("strawberry")) {
+            if (p >= threshold) {
+              strawberryProb = p;
+              meetsThreshold = true;
+            }
+          } else if (pred.className.toLowerCase().includes("grape")) {
+            if (p >= threshold) {
+              grapeProb = p;
+              meetsThreshold = true;
+            }
+          }
+        });
+        // If no prediction meets threshold, show "Not in Database" as 100%
+        if (!meetsThreshold) {
+          resultApples.textContent = "0%";
+          resultStrawberry.textContent = "0%";
+          resultGrape.textContent = "0%";
+          resultNotFound.textContent = "100%";
+        } else {
+          // Otherwise, display the probabilities (rounded to whole percentage)
+          resultApples.textContent = Math.round(appleProb * 100) + "%";
+          resultStrawberry.textContent = Math.round(strawberryProb * 100) + "%";
+          resultGrape.textContent = Math.round(grapeProb * 100) + "%";
+          resultNotFound.textContent = "0%";
+        }
+      }
+    </script>
+  </body>
 </html>
