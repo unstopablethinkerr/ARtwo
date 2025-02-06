@@ -1,5 +1,5 @@
 const URL = "./my_model/";
-let model, webcam, labelContainer, maxPredictions;
+let model, webcam, maxPredictions;
 
 async function init() {
     const modelURL = URL + "model.json";
@@ -8,14 +8,13 @@ async function init() {
     model = await tmImage.load(modelURL, metadataURL);
     maxPredictions = model.getTotalClasses();
 
-    const flip = true; // whether to flip the webcam
+    const flip = false; // Set to false to use the back camera
     webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
     await webcam.setup(); // request access to the webcam
     await webcam.play();
     window.requestAnimationFrame(loop);
 
     document.getElementById("webcam-container").appendChild(webcam.canvas);
-    labelContainer = document.getElementById("label-container");
 }
 
 async function loop() {
@@ -28,19 +27,20 @@ async function predict() {
     const prediction = await model.predict(webcam.canvas);
     const threshold = parseFloat(document.getElementById("thresholdSlider").value);
 
-    let notInDatabasePercentage = 100;
+    let maxProbability = 0;
+    let recognizedLabel = "None";
+    let recognizedPercentage = "0%";
+
     for (let i = 0; i < maxPredictions; i++) {
-        const classPrediction = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-        const percentage = (prediction[i].probability * 100).toFixed(2);
-
-        if (prediction[i].probability >= threshold) {
-            notInDatabasePercentage -= parseFloat(percentage);
+        if (prediction[i].probability > maxProbability && prediction[i].probability >= threshold) {
+            maxProbability = prediction[i].probability;
+            recognizedLabel = prediction[i].className;
+            recognizedPercentage = (prediction[i].probability * 100).toFixed(2) + "%";
         }
-
-        document.getElementById(prediction[i].className.toLowerCase() + "Percentage").innerText = percentage + "%";
     }
 
-    document.getElementById("notInDatabasePercentage").innerText = notInDatabasePercentage.toFixed(2) + "%";
+    document.getElementById("recognizedLabel").innerText = recognizedLabel;
+    document.getElementById("recognizedPercentage").innerText = recognizedPercentage;
 }
 
 function toggleWebcam() {
