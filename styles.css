@@ -44,19 +44,7 @@ body {
     flex-wrap: wrap;
 }
 
-#resultsTable {
-    width: 100%;
-    border-collapse: collapse;
+#result {
     margin-top: 20px;
-    font-size: 14px;
-}
-
-#resultsTable th, #resultsTable td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-}
-
-#resultsTable th {
-    background-color: #f2f2f2;
+    font-size: 18px;
 }
