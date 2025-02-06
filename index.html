@@ -19,26 +19,27 @@
       min-height: 100vh;
       overflow: hidden;
     }
-    /* Container to maintain relative positioning */
+    /* Container for the canvas */
     .camera-container {
       position: relative;
       width: 100%;
-      max-width: 640px;  /* maximum width for larger screens */
+      max-width: 640px; /* maximum width for larger screens */
     }
-    /* Responsive video and canvas */
-    #video, #canvas {
+    /* Hide the video element */
+    #video {
+      display: none;
+    }
+    /* Responsive canvas */
+    #canvas {
       width: 100%;
       height: auto;
       display: block;
     }
-    /* Optionally mirror the video if needed */
-    /* Uncomment the next line if you want the video mirrored */
-/*     #video, #canvas { transform: scaleX(-1); } */
   </style>
 </head>
 <body>
   <div class="camera-container">
-    <!-- Video element for the camera feed -->
+    <!-- Video element (hidden) for the camera feed -->
     <video id="video" autoplay muted playsinline></video>
     <!-- Canvas element for drawing bounding boxes -->
     <canvas id="canvas"></canvas>
@@ -101,7 +102,7 @@
       // Clear previous drawings
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Optionally, draw the current video frame as background
+      // Draw the current video frame as background
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       // Draw each prediction
