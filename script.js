@@ -1,5 +1,5 @@
 const URL = "./my_model/";
-let model, webcam, maxPredictions;
+let model, webcam, labelContainer, maxPredictions;
 
 async function init() {
     const modelURL = URL + "model.json";
@@ -14,21 +14,8 @@ async function init() {
     await webcam.play();
     window.requestAnimationFrame(loop);
 
-    document.getElementById("startStopButton").addEventListener("click", () => {
-        const button = document.getElementById("startStopButton");
-        if (button.textContent === "Start") {
-            webcam.play();
-            button.textContent = "Stop";
-        } else {
-            webcam.pause();
-            button.textContent = "Start";
-        }
-    });
-
-    document.getElementById("thresholdSlider").addEventListener("input", () => {
-        const threshold = parseFloat(document.getElementById("thresholdSlider").value);
-        // You can use this threshold value to filter predictions
-    });
+    document.getElementById("webcam-container").appendChild(webcam.canvas);
+    labelContainer = document.getElementById("label-container");
 }
 
 async function loop() {
@@ -44,16 +31,25 @@ async function predict() {
     let notInDatabasePercentage = 100;
     for (let i = 0; i < maxPredictions; i++) {
         const classPrediction = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-        const percentage = (prediction[i].probability * 100).toFixed(2) + "%";
+        const percentage = (prediction[i].probability * 100).toFixed(2);
 
         if (prediction[i].probability >= threshold) {
             notInDatabasePercentage -= parseFloat(percentage);
         }
 
-        document.getElementById(prediction[i].className.toLowerCase() + "Percentage").innerText = percentage;
+        document.getElementById(prediction[i].className.toLowerCase() + "Percentage").innerText = percentage + "%";
     }
 
     document.getElementById("notInDatabasePercentage").innerText = notInDatabasePercentage.toFixed(2) + "%";
 }
 
-init();
+function toggleWebcam() {
+    const button = document.getElementById("startStopButton");
+    if (button.textContent === "Start") {
+        init();
+        button.textContent = "Stop";
+    } else {
+        webcam.stop();
+        button.textContent = "Start";
+    }
+}
