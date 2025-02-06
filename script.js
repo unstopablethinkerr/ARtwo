@@ -1,71 +1,59 @@
-let model;
-let video = document.getElementById('video');
-let toggleButton = document.getElementById('toggleButton');
-let thresholdSlider = document.getElementById('threshold');
-let thresholdValue = document.getElementById('thresholdValue');
-let resultsTable = document.getElementById('resultsTable');
+const URL = "./my_model/";
+let model, webcam, maxPredictions;
 
-async function loadModel() {
-    model = await tf.loadGraphModel('./my_model/model.json');
-}
+async function init() {
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
 
-async function startVideo() {
-    if (navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        video.srcObject = stream;
-    }
-}
+    model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
 
-function stopVideo() {
-    const stream = video.srcObject;
-    const tracks = stream.getTracks();
-    tracks.forEach(track => track.stop());
-    video.srcObject = null;
-}
+    const flip = true; // whether to flip the webcam
+    webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
+    await webcam.setup(); // request access to the webcam
+    await webcam.play();
+    window.requestAnimationFrame(loop);
 
-function updateThreshold() {
-    thresholdValue.textContent = thresholdSlider.value;
-}
-
-async function predict() {
-    const img = tf.browser.fromPixels(video);
-    const resizedImg = tf.image.resizeBilinear(img, [224, 224]);
-    const expandedImg = resizedImg.expandDims(0);
-    const predictions = await model.predict(expandedImg).data();
-
-    const labels = ['strawberry', 'grape', 'apple', 'not in database'];
-    const results = Array.from(predictions).map((prob, index) => ({ label: labels[index], probability: prob }));
-
-    results.sort((a, b) => b.probability - a.probability);
-
-    resultsTable.querySelectorAll('tbody tr').forEach((row, index) => {
-        const labelCell = row.querySelector('td:first-child');
-        const probabilityCell = row.querySelector('td:last-child');
-        if (index < results.length) {
-            labelCell.textContent = results[index].label;
-            probabilityCell.textContent = `${(results[index].probability * 100).toFixed(2)}%`;
+    document.getElementById("startStopButton").addEventListener("click", () => {
+        const button = document.getElementById("startStopButton");
+        if (button.textContent === "Start") {
+            webcam.play();
+            button.textContent = "Stop";
         } else {
-            labelCell.textContent = 'Not in Database';
-            probabilityCell.textContent = '0%';
+            webcam.pause();
+            button.textContent = "Start";
         }
     });
 
-    requestAnimationFrame(predict);
+    document.getElementById("thresholdSlider").addEventListener("input", () => {
+        const threshold = parseFloat(document.getElementById("thresholdSlider").value);
+        // You can use this threshold value to filter predictions
+    });
 }
 
-toggleButton.addEventListener('click', () => {
-    if (toggleButton.textContent === 'Start') {
-        startVideo();
-        predict();
-        toggleButton.textContent = 'Stop';
-    } else {
-        stopVideo();
-        toggleButton.textContent = 'Start';
+async function loop() {
+    webcam.update(); // update the webcam frame
+    await predict();
+    window.requestAnimationFrame(loop);
+}
+
+async function predict() {
+    const prediction = await model.predict(webcam.canvas);
+    const threshold = parseFloat(document.getElementById("thresholdSlider").value);
+
+    let notInDatabasePercentage = 100;
+    for (let i = 0; i < maxPredictions; i++) {
+        const classPrediction = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+        const percentage = (prediction[i].probability * 100).toFixed(2) + "%";
+
+        if (prediction[i].probability >= threshold) {
+            notInDatabasePercentage -= parseFloat(percentage);
+        }
+
+        document.getElementById(prediction[i].className.toLowerCase() + "Percentage").innerText = percentage;
     }
-});
 
-thresholdSlider.addEventListener('input', updateThreshold);
+    document.getElementById("notInDatabasePercentage").innerText = notInDatabasePercentage.toFixed(2) + "%";
+}
 
-loadModel().then(() => {
-    console.log('Model loaded');
-});
+init();
